@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Routine Analytics Tracker - Dual Sheet v25.7</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; transition: background-color 0.3s, color 0.3s; }
+        .heading-font { font-family: 'Space Grotesk', sans-serif; }
+        
+        .black-day-box {
+            background-color: #111111;
+            color: #ffffff;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+        .dark .black-day-box {
+            background-color: #334155;
+        }
+        
+        .circle-progress {
+            transition: stroke-dashoffset 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), stroke 0.4s ease, opacity 0.3s ease;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        .horizontal-scroll-container::-webkit-scrollbar { height: 10px; }
+        .horizontal-scroll-container::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 999px; }
+        .dark .horizontal-scroll-container::-webkit-scrollbar-track { background: #1e293b; }
+        .horizontal-scroll-container::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 999px; border: 2px solid #e2e8f0; }
+        .dark .horizontal-scroll-container::-webkit-scrollbar-thumb { background: #475569; border: 2px solid #1e293b; }
+        
+        .task-checkbox { width: 16px; height: 16px; cursor: pointer; accent-color: #059669; }
+        .task-list-container::-webkit-scrollbar { width: 6px; }
+
+        .progress-bar-fill { transition: width 0.5s ease-out, background-color 0.3s ease; }
+        
+        @keyframes success-glow {
+            0% { transform: scale(1); filter: drop-shadow(0 0 0px rgba(16, 185, 129, 0)); }
+            50% { transform: scale(1.03); filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.6)); }
+            100% { transform: scale(1); filter: drop-shadow(0 0 0px rgba(16, 185, 129, 0)); }
+        }
+        .glow-success { animation: success-glow 0.6s ease-in-out; }
+
+        .heatmap-container-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .heatmap-days-column {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .heatmap-day-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: #94a3b8;
+            height: 11px;
+            line-height: 11px;
+            display: flex;
+            align-items: center;
+        }
+        .heatmap-grid {
+            display: grid;
+            grid-auto-flow: column;
+            grid-template-rows: repeat(7, 11px);
+            gap: 4px;
+        }
+        .heatmap-cell {
+            width: 11px;
+            height: 11px;
+            border-radius: 2px;
+            transition: transform 0.1s;
+        }
+        .heatmap-cell:hover {
+            transform: scale(1.3);
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- HEADER UTAMA -->
+        <div class="bg-slate-950 text-white rounded-2xl p-6 flex flex-col lg:flex-row justify-between items-start lg:items-center shadow-lg gap-4">
+            <div>
+                <span class="text-xs font-bold text-slate-400 tracking-widest uppercase">PROGRES AKUMULASI SISTEM</span>
+                <h1 class="heading-font text-2xl md:text-3xl font-bold tracking-tight mt-1">ROUTINE SYSTEM DASHBOARD (V25.7)</h1>
+                <p class="text-xs text-slate-400 mt-1">Sistem Kalender: Dinamis & Terkoneksi Real-time antara Sheet 1 & Sheet 2.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="toggleTheme()" class="w-10 h-10 bg-slate-800 hover:bg-slate-700 rounded-xl flex items-center justify-center text-lg transition-all shadow-md mr-2" title="Ubah Mode Tampilan">
+                    <i id="theme-icon" class="fa-solid fa-sun text-amber-400"></i>
+                </button>
+                <button onclick="loadDemoData()" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-xl text-xs font-bold transition-all shadow-md">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Muat Demo
+                </button>
+                <button onclick="scrollToToday()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs font-bold transition-all shadow-md">
+                    <i class="fa-solid fa-location-crosshairs mr-1"></i> Hari Ini
+                </button>
+                <button onclick="exportData()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-xs font-bold transition-all shadow-md">
+                    <i class="fa-solid fa-download mr-1"></i> Cadangkan
+                </button>
+                <button onclick="triggerImport()" class="px-3 py-2 bg-amber-600 hover:bg-amber-700 rounded-xl text-xs font-bold transition-all shadow-md">
+                    <i class="fa-solid fa-upload mr-1"></i> Pulihkan
+                </button>
+                <input type="file" id="import-file-input" class="hidden" accept=".json" onchange="importData(event)">
+                <button onclick="resetAllData()" class="px-3 py-2 bg-rose-600 hover:bg-rose-700 rounded-xl text-xs font-bold transition-all shadow-md">
+                    <i class="fa-solid fa-trash-can mr-1"></i> Reset
+                </button>
+            </div>
+        </div>
+
+        <!-- NAVIGASI SHEET / TAB -->
+        <div class="flex border-b border-slate-200 dark:border-slate-700 gap-2">
+            <button id="tab-sheet1" onclick="switchSheet('sheet1')" class="px-5 py-3 font-bold text-sm rounded-t-xl transition-all border-b-2 border-blue-600 bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400">
+                <i class="fa-solid fa-calendar-days mr-2"></i>Sheet 1: Kalender & Pekan
+            </button>
+            <button id="tab-sheet2" onclick="switchSheet('sheet2')" class="px-5 py-3 font-bold text-sm rounded-t-xl transition-all border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                <i class="fa-solid fa-chart-pie mr-2"></i>Sheet 2: Grafik & Analisis Progres
+            </button>
+        </div>
+
+        <!-- ================= SHEET 1: UTAMA & PEKAN ================= -->
+        <div id="content-sheet1" class="space-y-4">
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm space-y-4">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-700 pb-3">
+                    <h2 class="heading-font text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-square-poll-horizontal text-blue-600"></i> Matriks Pengisian Harian
+                    </h2>
+                    
+                    <div class="flex flex-wrap items-center gap-3">
+                        <!-- Dropdown Bulan -->
+                        <div class="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl">
+                            <label class="text-xs font-bold text-slate-500 uppercase">Bulan:</label>
+                            <select id="filter-month-select" onchange="filterTimeline()" class="bg-transparent text-xs font-bold text-slate-700 dark:text-white focus:outline-none cursor-pointer">
+                                <option value="ALL" class="dark:bg-slate-800">Semua Bulan</option>
+                                <option value="2026-07" class="dark:bg-slate-800">Juli 2026</option>
+                                <option value="2026-08" class="dark:bg-slate-800">Agustus 2026</option>
+                                <option value="2026-09" class="dark:bg-slate-800">September 2026</option>
+                                <option value="2026-10" class="dark:bg-slate-800">Oktober 2026</option>
+                                <option value="2026-11" class="dark:bg-slate-800">November 2026</option>
+                                <option value="2026-12" class="dark:bg-slate-800">Desember 2026</option>
+                                <option value="2027-01" class="dark:bg-slate-800">Januari 2027</option>
+                                <option value="2027-12" class="dark:bg-slate-800">Desember 2027</option>
+                            </select>
+                        </div>
+
+                        <!-- Filter Tombol Pekan -->
+                        <div class="flex items-center gap-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-1 rounded-xl" id="week-filter-buttons">
+                            <button onclick="setWeekFilter('ALL')" id="btn-wk-all" class="px-2 py-1 rounded-lg text-[11px] font-bold bg-blue-600 text-white">Semua Pekan</button>
+                            <button onclick="setWeekFilter(1)" id="btn-wk-1" class="px-2 py-1 rounded-lg text-[11px] font-bold hover:bg-slate-200 dark:hover:bg-slate-700">Pekan 1</button>
+                            <button onclick="setWeekFilter(2)" id="btn-wk-2" class="px-2 py-1 rounded-lg text-[11px] font-bold hover:bg-slate-200 dark:hover:bg-slate-700">Pekan 2</button>
+                            <button onclick="setWeekFilter(3)" id="btn-wk-3" class="px-2 py-1 rounded-lg text-[11px] font-bold hover:bg-slate-200 dark:hover:bg-slate-700">Pekan 3</button>
+                            <button onclick="setWeekFilter(4)" id="btn-wk-4" class="px-2 py-1 rounded-lg text-[11px] font-bold hover:bg-slate-200 dark:hover:bg-slate-700">Pekan 4</button>
+                            <button onclick="setWeekFilter(5)" id="btn-wk-5" class="px-2 py-1 rounded-lg text-[11px] font-bold hover:bg-slate-200 dark:hover:bg-slate-700">Pekan 5</button>
+                        </div>
+
+                        <!-- Kalender Lompat Tanggal -->
+                        <div class="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl">
+                            <input type="date" id="search-date-input" min="2026-07-01" max="2027-12-31" onchange="jumpToDate(this.value)" class="bg-transparent text-xs font-bold text-slate-700 dark:text-white focus:outline-none cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+                <div id="days-scroll-container" class="horizontal-scroll-container flex flex-nowrap overflow-x-auto gap-4 pb-4 pt-1 px-1"></div>
+            </div>
+        </div>
+
+        <!-- ================= SHEET 2: RINGKASAN & GRAFIK ================= -->
+        <div id="content-sheet2" class="space-y-6 hidden">
+            <!-- RINGKASAN UTAMA -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm flex flex-col justify-between min-h-[140px]">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p id="stat-week-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">PROGRES PEKAN INI</p>
+                            <h3 id="stat-week-pct" class="text-3xl font-extrabold text-slate-900 dark:text-white mt-1 heading-font">0%</h3>
+                            <p id="stat-week-trend" class="text-[11px] font-semibold text-slate-400 mt-1 flex items-center gap-1">Statis</p>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 flex items-center justify-center text-lg shadow-sm"><i class="fa-solid fa-chart-simple"></i></div>
+                    </div>
+                    <div class="space-y-1 mt-4">
+                        <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                            <div id="bar-week-fill" class="progress-bar-fill h-1.5 bg-slate-300 w-0"></div>
+                        </div>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Target Kepatuhan: 75%</p>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm flex flex-col justify-between min-h-[140px]">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p id="stat-month-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">PROGRES BULAN INI</p>
+                            <h3 id="stat-month-pct" class="text-3xl font-extrabold text-slate-900 dark:text-white mt-1 heading-font">0%</h3>
+                            <p id="stat-month-trend" class="text-[11px] font-semibold text-slate-400 mt-1 flex items-center gap-1">Statis</p>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 flex items-center justify-center text-lg shadow-sm"><i class="fa-solid fa-calendar-check"></i></div>
+                    </div>
+                    <div class="space-y-1 mt-4">
+                        <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                            <div id="bar-month-fill" class="progress-bar-fill h-1.5 bg-slate-300 w-0"></div>
+                        </div>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Ambang Batas Ideal: 80%</p>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm flex flex-col justify-between min-h-[140px]">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p id="stat-year-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">PROGRES TAHUN INI</p>
+                            <div class="flex items-baseline gap-2 mt-1">
+                                <h3 id="stat-year-pct" class="text-3xl font-extrabold text-slate-900 dark:text-white heading-font">0%</h3>
+                                <span id="stat-year-ratio" class="text-xs font-semibold text-slate-400">(0 / 0)</span>
+                            </div>
+                            <p class="text-[11px] font-semibold text-emerald-600 mt-1 flex items-center gap-1"><i class="fa-solid fa-arrow-trend-up"></i> Akumulasi Makro</p>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 flex items-center justify-center text-lg shadow-sm"><i class="fa-solid fa-calendar"></i></div>
+                    </div>
+                    <div class="space-y-1 mt-4">
+                        <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                            <div id="bar-year-fill" class="progress-bar-fill h-1.5 bg-slate-300 w-0"></div>
+                        </div>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Total Tugas Terproses</p>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm flex flex-col justify-between min-h-[140px]">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">TINGKAT KONSISTENSI</p>
+                            <h3 id="stat-consistency" class="text-base font-extrabold text-slate-900 dark:text-white mt-1 flex flex-col items-start gap-0.5 leading-tight"><span>Belum Mulai</span></h3>
+                            <div class="mt-1 flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-200/50 dark:border-amber-900/50 w-max">
+                                <i class="fa-solid fa-fire text-[11px]"></i> <span id="stat-streak-val">0 Hari Beruntun</span>
+                            </div>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 flex items-center justify-center text-lg shadow-sm"><i class="fa-solid fa-bolt"></i></div>
+                    </div>
+                    <div class="space-y-1 mt-4">
+                        <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                            <div id="bar-consistency-fill" class="progress-bar-fill h-1.5 bg-slate-300 w-0"></div>
+                        </div>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Evaluasi Streak Kepatuhan</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HEATMAP KONTRIBUSI TAHUNAN -->
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm space-y-3">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                        <i class="fa-solid fa-cubes text-emerald-500"></i> Macro Contribution Matrix (Daily Consistency)
+                    </h3>
+                    <div class="flex items-center gap-1 text-[9px] text-slate-400 font-bold uppercase">
+                        <span>Less</span>
+                        <div class="w-2.5 h-2.5 bg-slate-100 dark:bg-slate-700 rounded-sm"></div>
+                        <div class="w-2.5 h-2.5 bg-emerald-200 rounded-sm"></div>
+                        <div class="w-2.5 h-2.5 bg-emerald-400 rounded-sm"></div>
+                        <div class="w-2.5 h-2.5 bg-emerald-600 rounded-sm"></div>
+                        <span>More</span>
+                    </div>
+                </div>
+                <div class="overflow-x-auto pb-2 horizontal-scroll-container">
+                    <div class="heatmap-container-wrapper pt-1 min-w-[750px]">
+                        <div class="heatmap-days-column">
+                            <div class="heatmap-day-label">Mon</div>
+                            <div class="heatmap-day-label">Tue</div>
+                            <div class="heatmap-day-label">Wed</div>
+                            <div class="heatmap-day-label">Thu</div>
+                            <div class="heatmap-day-label">Fri</div>
+                            <div class="heatmap-day-label">Sat</div>
+                            <div class="heatmap-day-label">Sun</div>
+                        </div>
+                        <div id="heatmap-grid-container" class="heatmap-grid"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRAFIK ANALISIS DENGAN SEGMENTED DOUGHNUT -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm flex flex-col items-center justify-center relative min-h-[350px]">
+                    <h3 class="font-bold text-sm text-slate-700 dark:text-slate-300 mb-4 absolute top-6 left-6 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-slate-400"></i> Kontribusi Pekan Ini (Mon - Sun)
+                    </h3>
+                    
+                    <div class="w-60 h-60 mt-6 relative">
+                        <canvas id="segmentedDoughnutChart"></canvas>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span id="doughnut-center-pct" class="text-3xl font-extrabold text-slate-900 dark:text-white heading-font">0%</span>
+                            <span id="doughnut-center-sub" class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Selesai</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm">
+                    <h3 class="font-bold text-sm text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2"><i class="fa-solid fa-chart-line text-slate-400"></i> Tren Kepatuhan Bulanan</h3>
+                    <div class="h-64"><canvas id="monthlyChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================= MODAL KUSTOM UNTUK INPUT DATA ================= -->
+    <div id="custom-input-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-md p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl transform scale-95 transition-transform duration-300 space-y-4">
+            <div>
+                <h3 id="modal-title" class="heading-font text-lg font-bold text-slate-900 dark:text-white">Tambah Tugas Baru</h3>
+                <p id="modal-subtitle" class="text-xs text-slate-400 mt-0.5">Masukkan deskripsi rutinitas harian Anda.</p>
+            </div>
+            
+            <!-- MODIFIKASI: Penambahan Wrapper Kontainer Bertipe 'relative' dan Tombol Mikrofon Terintegrasi -->
+            <div id="modal-input-wrapper" class="relative flex items-center">
+                <input type="text" id="modal-text-input" class="w-full pl-4 pr-12 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Tulis nama tugas di sini...">
+                <button id="btn-voice-input" onclick="startVoiceRecognition()" class="absolute right-3 w-8 h-8 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 transition-all shadow-sm" title="Input dengan Suara">
+                    <i id="voice-icon" class="fa-solid fa-microphone text-xs"></i>
+                </button>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button onclick="closeInputModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 transition-all">
+                    Batal
+                </button>
+                <button id="modal-submit-btn" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 rounded-xl text-xs font-bold text-white shadow-md transition-all">
+                    Simpan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = "infinite_tracker_state_v11";
+        const dayNamesMap = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const monthNamesId = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        
+        let timelineData = []; 
+        let userProgress = {}; 
+        let segmentedDoughnutInstance = null;
+        let monthlyChartInstance = null;
+        let currentWeekFilter = 'ALL'; 
+
+        let activeModalCallback = null;
+        let lastRenderedPercentages = {};
+
+        // MODIFIKASI: Peningkatan fungsi modal agar dinamis mendukung tipe "Hapus" (Tombol merah) tanpa input text
+        function openInputModal(title, subtitle, defaultValue, placeholder, onSubmit, isDeleteMode = false) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-subtitle').innerText = subtitle;
+            
+            const inputWrapper = document.getElementById('modal-input-wrapper');
+            const inputEl = document.getElementById('modal-text-input');
+            const submitBtn = document.getElementById('modal-submit-btn');
+
+            if (isDeleteMode) {
+                inputWrapper.classList.add('hidden'); // Sembunyikan form input jika hanya konfirmasi hapus
+                submitBtn.innerText = "Hapus Tugas";
+                submitBtn.className = "px-5 py-2 bg-rose-600 hover:bg-rose-700 rounded-xl text-xs font-bold text-white shadow-md transition-all";
+            } else {
+                inputWrapper.classList.remove('hidden');
+                inputEl.value = defaultValue;
+                inputEl.placeholder = placeholder;
+                submitBtn.innerText = "Simpan";
+                submitBtn.className = "px-5 py-2 bg-blue-600 hover:bg-blue-700 rounded-xl text-xs font-bold text-white shadow-md transition-all";
+            }
+
+            activeModalCallback = onSubmit;
+
+            const modal = document.getElementById('custom-input-modal');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.firstElementChild.classList.remove('scale-95');
+            
+            if (!isDeleteMode) {
+                setTimeout(() => inputEl.focus(), 100);
+                inputEl.onkeydown = function(e) {
+                    if(e.key === 'Enter') handleModalSubmit();
+                };
+            }
+            submitBtn.onclick = handleModalSubmit;
+        }
+
+        function closeInputModal() {
+            const modal = document.getElementById('custom-input-modal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modal.firstElementChild.classList.add('scale-95');
+            activeModalCallback = null;
+        }
+
+        function handleModalSubmit() {
+            const val = document.getElementById('modal-text-input').value;
+            if (activeModalCallback) {
+                activeModalCallback(val);
+            }
+            closeInputModal();
+        }
+
+        // TAMBAHAN: Fungsi Pengenalan Suara Berbasis Web Speech API (SpeechRecognition)
+        function startVoiceRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!SpeechRecognition) {
+                alert("Maaf, browser Anda tidak mendukung fitur Pengenalan Suara (Voice Recognition). Disarankan menggunakan Chrome atau Edge terbaru.");
+                return;
+            }
+
+            const recognition = new SpeechRecognition();
+            const voiceBtn = document.getElementById('btn-voice-input');
+            const voiceIcon = document.getElementById('voice-icon');
+            const inputEl = document.getElementById('modal-text-input');
+
+            recognition.lang = 'id-ID'; // Mengatur tangkapan utama ke Bahasa Indonesia
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.onstart = function() {
+                voiceBtn.classList.remove('bg-slate-200', 'dark:bg-slate-700', 'text-slate-600', 'dark:text-slate-300');
+                voiceBtn.classList.add('bg-rose-600', 'text-white', 'animate-pulse');
+                voiceIcon.className = "fa-solid fa-microphone-lines text-xs";
+                inputEl.placeholder = "Mendengarkan suara Anda...";
+            };
+
+            recognition.onend = function() {
+                voiceBtn.classList.remove('bg-rose-600', 'text-white', 'animate-pulse');
+                voiceBtn.classList.add('bg-slate-200', 'dark:bg-slate-700', 'text-slate-600', 'dark:text-slate-300');
+                voiceIcon.className = "fa-solid fa-microphone text-xs";
+                inputEl.placeholder = "Tulis nama tugas di sini...";
+            };
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                inputEl.value = transcript;
+            };
+
+            recognition.onerror = function(event) {
+                console.error("Speech recognition error:", event.error);
+                if(event.error === 'not-allowed') {
+                    alert("Harap berikan izin akses mikrofon di pengaturan browser Anda.");
+                }
+            };
+
+            recognition.start();
+        }
+
+        function switchSheet(sheetId) {
+            const btn1 = document.getElementById('tab-sheet1');
+            const btn2 = document.getElementById('tab-sheet2');
+            const content1 = document.getElementById('content-sheet1');
+            const content2 = document.getElementById('content-sheet2');
+
+            if (sheetId === 'sheet1') {
+                content1.classList.remove('hidden');
+                content2.classList.add('hidden');
+                btn1.className = "px-5 py-3 font-bold text-sm rounded-t-xl transition-all border-b-2 border-blue-600 bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400";
+                btn2.className = "px-5 py-3 font-bold text-sm rounded-t-xl transition-all border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800";
+                filterTimeline(); 
+            } else {
+                content1.classList.add('hidden');
+                content2.classList.remove('hidden');
+                btn2.className = "px-5 py-3 font-bold text-sm rounded-t-xl transition-all border-b-2 border-blue-600 bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400";
+                btn1.className = "px-5 py-3 font-bold text-sm rounded-t-xl transition-all border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800";
+                
+                updateMetrics();
+                renderHeatmap();
+                updateCharts();
+                setTimeout(() => {
+                    if (segmentedDoughnutInstance) segmentedDoughnutInstance.resize();
+                    if (monthlyChartInstance) monthlyChartInstance.resize();
+                }, 50);
+            }
+        }
+
+        function toggleTheme() {
+            const htmlEl = document.documentElement;
+            const iconEl = document.getElementById('theme-icon');
+            
+            if (htmlEl.classList.contains('dark')) {
+                htmlEl.classList.remove('dark');
+                iconEl.className = "fa-solid fa-moon text-indigo-600";
+            } else {
+                htmlEl.classList.add('dark');
+                iconEl.className = "fa-solid fa-sun text-amber-400";
+            }
+            if (segmentedDoughnutInstance && monthlyChartInstance) {
+                updateCharts();
+                renderHeatmap();
+            }
+        }
+
+        function generateTimeline() {
+            timelineData = [];
+            const baseStart = new Date(2026, 6, 1); 
+            
+            let startDay = baseStart.getDay();
+            let shiftToMonday = startDay === 0 ? -6 : 1 - startDay;
+            baseStart.setDate(baseStart.getDate() + shiftToMonday);
+
+            const end = new Date(2027, 11, 31);
+            let current = new Date(baseStart);
+
+            let currentMonthKey = "";
+            let weekCounter = 1;
+
+            while (current <= end) {
+                const dateKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
+                const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+                const dayIndex = current.getDay();
+
+                if (monthKey !== currentMonthKey) {
+                    currentMonthKey = monthKey;
+                    weekCounter = 1;
+                } 
+                else if (dayIndex === 1 && current.getDate() !== 1) {
+                    weekCounter++;
+                }
+
+                timelineData.push({
+                    key: dateKey,
+                    yearMonth: monthKey,
+                    displayDate: `${String(current.getDate()).padStart(2, '0')}.${String(current.getMonth() + 1).padStart(2, '0')}.${current.getFullYear()}`,
+                    dayName: dayNamesMap[dayIndex],
+                    weekInMonth: weekCounter 
+                });
+                current.setDate(current.getDate() + 1);
+            }
+        }
+
+        function loadStorage() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) userProgress = JSON.parse(saved);
+            
+            timelineData.forEach(day => {
+                if (!userProgress[day.key]) {
+                    userProgress[day.key] = { hideCompleted: false, tasks: [{ id: 't1_' + day.key, name: 'Tugas #1', completed: false }] };
+                }
+            });
+        }
+
+        function saveStorage() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(userProgress));
+            updateMetrics();
+            if(!document.getElementById('content-sheet2').classList.contains('hidden')){
+                renderHeatmap();
+            }
+            updateCharts();
+        }
+
+        function loadDemoData() {
+            timelineData.slice(0, 90).forEach((d, i) => {
+                userProgress[d.key].tasks = [
+                    { id: 'd1_'+i+'_'+Date.now(), name: 'Olahraga Pagi', completed: i % 2 === 0 },
+                    { id: 'd2_'+i+'_'+Date.now(), name: 'Review Kerja', completed: i % 5 !== 0 },
+                    { id: 'd3_'+i+'_'+Date.now(), name: 'Membaca Buku', completed: i % 3 !== 0 }
+                ];
+            });
+            saveStorage();
+            filterTimeline();
+            alert("Data demo berhasil dimuat!");
+        }
+
+        function toggleTask(dateKey, taskId) {
+            const task = userProgress[dateKey].tasks.find(t => t.id === taskId);
+            if (task) {
+                const wasCompleted = task.completed;
+                task.completed = !task.completed;
+                
+                saveStorage();
+                
+                const cardEl = document.getElementById(`card-day-${dateKey}`);
+                if (cardEl) {
+                    const data = userProgress[dateKey];
+                    const total = data ? data.tasks.length : 0;
+                    const done = data ? data.tasks.filter(t => t.completed).length : 0;
+                    const pct = total ? Math.round((done/total)*100) : 0;
+                    
+                    const txtPercentEl = document.getElementById(`pct-text-${dateKey}`);
+                    if (txtPercentEl) {
+                        let startVal = lastRenderedPercentages[dateKey] || 0;
+                        animateCountNumber(txtPercentEl, startVal, pct, 450);
+                    }
+                    lastRenderedPercentages[dateKey] = pct;
+
+                    const circleProgressEl = document.getElementById(`circle-progress-${dateKey}`);
+                    if (circleProgressEl) {
+                        const rad = 38, circ = 2 * Math.PI * rad;
+                        circleProgressEl.style.strokeDashoffset = circ - (pct/100)*circ;
+                        circleProgressEl.style.stroke = pct === 100 ? '#059669' : pct >= 50 ? '#eab308' : '#ef4444';
+                        
+                        if (pct === 0) {
+                            circleProgressEl.style.opacity = "0";
+                        } else {
+                            circleProgressEl.style.opacity = "1";
+                        }
+                    }
+
+                    const ratioTextEl = document.getElementById(`ratio-text-${dateKey}`);
+                    if (ratioTextEl) ratioTextEl.innerText = `${done}/${total}`;
+
+                    if (!wasCompleted && data.tasks.every(t => t.completed)) {
+                        const svgEl = document.getElementById(`svg-container-${dateKey}`);
+                        if (svgEl) {
+                            svgEl.classList.add('glow-success');
+                            setTimeout(() => svgEl.classList.remove('glow-success'), 600);
+                        }
+                    }
+
+                    setTimeout(() => { filterTimeline(); }, 500);
+                } else {
+                    filterTimeline();
+                }
+            }
+        }
+
+        function animateCountNumber(element, start, end, duration) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const currentVal = Math.floor(progress * (end - start) + start);
+                element.innerText = `${currentVal}%`;
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    element.innerText = `${end}%`;
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        function addTask(dateKey) {
+            openInputModal(
+                "Tambah Tugas Baru",
+                `Menambahkan tugas untuk tanggal ${dateKey}`,
+                "",
+                "Contoh: Minum air 2 liter, Meditasi...",
+                function(name) {
+                    if (name && name.trim()) {
+                        userProgress[dateKey].tasks.push({ id: 't_' + Date.now(), name: name.trim(), completed: false });
+                        saveStorage(); 
+                        filterTimeline();
+                    }
+                },
+                false
+            );
+        }
+
+        function duplicateTasksToNextWeek(dateKey) {
+            const source = userProgress[dateKey]?.tasks || [];
+            if (!source.length) return alert("List kosong.");
+            
+            openInputModal(
+                "Duplikasi Struktur Tugas",
+                "Apakah Anda yakin ingin menyalin daftar tugas ini ke 7 hari ke depan?",
+                "",
+                "",
+                function() {
+                    let base = new Date(dateKey);
+                    for(let i=1; i<=7; i++) {
+                        let next = new Date(base); next.setDate(base.getDate() + i);
+                        let k = `${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}-${String(next.getDate()).padStart(2,'0')}`;
+                        if (userProgress[k]) {
+                            userProgress[k].tasks = source.map(t => ({ id: 't_'+Date.now()+'_'+i+'_'+Math.random(), name: t.name, completed: false }));
+                        }
+                    }
+                    saveStorage(); 
+                    filterTimeline();
+                },
+                true
+            );
+        }
+
+        function toggleHideCompleted(dateKey) {
+            userProgress[dateKey].hideCompleted = !userProgress[dateKey].hideCompleted;
+            saveStorage(); filterTimeline();
+        }
+
+        function removeTask(e, dk, id) {
+            e.stopPropagation();
+            openInputModal(
+                "Hapus Tugas?",
+                "Tugas yang dihapus tidak dapat dikembalikan pada hari ini.",
+                "",
+                "",
+                function() {
+                    userProgress[dk].tasks = userProgress[dk].tasks.filter(t => t.id !== id); 
+                    saveStorage(); 
+                    filterTimeline();
+                },
+                true
+            );
+        }
+
+        function renameTask(e, dk, id, old) {
+            e.stopPropagation();
+            openInputModal(
+                "Ubah Nama Tugas",
+                "Perbarui detail deskripsi tugas Anda.",
+                old,
+                "Ubah nama tugas...",
+                function(name) {
+                    if (name && name.trim()) {
+                        userProgress[dk].tasks.find(t => t.id === id).name = name.trim();
+                        saveStorage(); 
+                        filterTimeline();
+                    }
+                },
+                false
+            );
+        }
+
+        function setWeekFilter(weekVal) {
+            currentWeekFilter = weekVal;
+            const buttons = document.querySelectorAll('#week-filter-buttons button');
+            buttons.forEach(btn => btn.className = "px-2 py-1 rounded-lg text-[11px] font-bold hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300");
+            
+            const activeId = weekVal === 'ALL' ? 'btn-wk-all' : `btn-wk-${weekVal}`;
+            document.getElementById(activeId).className = "px-2 py-1 rounded-lg text-[11px] font-bold bg-blue-600 text-white";
+            
+            filterTimeline();
+        }
+
+        function filterTimeline() {
+            const selectedMonth = document.getElementById("filter-month-select").value;
+            const container = document.getElementById("days-scroll-container");
+            container.innerHTML = "";
+            const rad = 38, circ = 2 * Math.PI * rad;
+
+            timelineData.forEach(day => {
+                if (selectedMonth !== "ALL" && day.yearMonth !== selectedMonth) return;
+                if (currentWeekFilter !== "ALL" && day.weekInMonth !== parseInt(currentWeekFilter)) return;
+
+                const data = userProgress[day.key];
+                const total = data ? data.tasks.length : 0;
+                const done = data ? data.tasks.filter(t => t.completed).length : 0;
+                const pct = total ? Math.round((done/total)*100) : 0;
+                
+                lastRenderedPercentages[day.key] = pct;
+
+                const card = document.createElement("div");
+                card.className = "w-[240px] shrink-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-xl p-4 flex flex-col justify-between space-y-4";
+                card.id = `card-day-${day.key}`;
+
+                let tasksHTML = "";
+                if(data && data.tasks) {
+                    data.tasks.forEach(t => {
+                        if (data.hideCompleted && t.completed) return;
+                        tasksHTML += `
+                            <div class="flex items-center justify-between p-3 border border-slate-100 dark:border-slate-700 rounded-xl shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700/50 text-xs text-slate-700 dark:text-slate-300">
+                                <div class="flex items-center gap-3 flex-grow cursor-pointer overflow-hidden" onclick="toggleTask('${day.key}', '${t.id}')">
+                                    <input type="checkbox" class="task-checkbox shrink-0" ${t.completed ? 'checked' : ''} onclick="event.stopPropagation(); toggleTask('${day.key}', '${t.id}')">
+                                    <span class="truncate font-medium ${t.completed ? 'line-through text-slate-400 dark:text-slate-500' : ''}">${t.name}</span>
+                                </div>
+                                <div class="flex items-center gap-2 pl-1 text-slate-400">
+                                    <button onclick="renameTask(event, '${day.key}', '${t.id}', '${t.name}')"><i class="fa-solid fa-pen text-[10px]"></i></button>
+                                    <button onclick="removeTask(event, '${day.key}', '${t.id}')"><i class="fa-solid fa-trash text-[10px]"></i></button>
+                                </div>
+                            </div>`;
+                    });
+                }
+
+                card.innerHTML = `
+                    <div class="text-center space-y-2">
+                        <div class="black-day-box py-2 px-2 rounded-md text-sm">${day.dayName}</div>
+                        <div class="text-xs font-bold text-slate-400">${day.displayDate}</div>
+                        <div class="relative flex items-center justify-center py-1" id="svg-container-${day.key}">
+                            <svg class="w-24 h-24">
+                                <circle class="text-slate-200 dark:text-slate-700" stroke-width="8" stroke="currentColor" fill="transparent" r="${rad}" cx="48" cy="48"/>
+                                <circle id="circle-progress-${day.key}" class="circle-progress" stroke-width="8" stroke-dasharray="${circ}" stroke-dashoffset="${circ - (pct/100)*circ}" stroke-linecap="round" stroke="${pct===100?'#059669':pct>=50?'#eab308':'#ef4444'}" fill="transparent" r="${rad}" cx="48" cy="48" style="opacity: ${pct === 0 ? '0' : '1'};"/>
+                            </svg>
+                            <div class="absolute text-center">
+                                <span id="pct-text-${day.key}" class="text-base font-extrabold heading-font text-slate-900 dark:text-white">${pct}%</span>
+                                <p id="ratio-text-${day.key}" class="text-[9px] text-slate-400 font-bold">${done}/${total}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center bg-slate-50 dark:bg-slate-900 p-2 rounded-xl border dark:border-slate-700 gap-2">
+                        <span class="text-sm font-semibold tracking-wide text-slate-600 dark:text-slate-400 pl-1">Tasks</span>
+                        <div class="flex gap-1.5">
+                            <button onclick="toggleHideCompleted('${day.key}')" class="py-1.5 px-2.5 rounded-lg text-xs font-bold shadow-sm transition-all ${data?.hideCompleted?'bg-blue-600 text-white hover:bg-blue-700':'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-950/60 dark:text-blue-400 dark:hover:bg-blue-900/50'}" title="Filter Selesai"><i class="${data?.hideCompleted?'fa-solid fa-eye-slash':'fa-solid fa-eye'}"></i></button>
+                            <button onclick="duplicateTasksToNextWeek('${day.key}')" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-400 dark:hover:bg-indigo-900/50 py-1.5 px-2.5 rounded-lg text-xs font-bold shadow-sm transition-all" title="Duplikasi Pekan Depan"><i class="fa-regular fa-copy"></i></button>
+                            <button onclick="addTask('${day.key}')" class="text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 py-1.5 px-3 rounded-lg shadow-sm transition-all" title="Tambah Tugas">+</button>
+                        </div>
+                    </div>
+                    <div class="task-list-container space-y-2 h-[220px] overflow-y-auto">${tasksHTML}</div>`;
+                container.appendChild(card);
+            });
+        }
+
+        function jumpToDate(v) {
+            switchSheet('sheet1'); 
+            setTimeout(() => {
+                const el = document.getElementById(`card-day-${v}`);
+                if(el) { 
+                    el.scrollIntoView({ behavior: 'smooth', inline: 'center' }); 
+                    el.classList.add('ring-4','ring-blue-500'); 
+                    setTimeout(()=>el.classList.remove('ring-4','ring-blue-500'),1500); 
+                }
+            }, 150);
+        }
+
+        function scrollToToday() {
+            let d = new Date(), k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            document.getElementById("filter-month-select").value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+            setWeekFilter('ALL');
+            setTimeout(() => jumpToDate(k), 200);
+        }
+
+        function getCurrentWeekDates() {
+            let today = new Date();
+            let day = today.getDay();
+            let diff = today.getDate() - day + (day === 0 ? -6 : 1); 
+            let monday = new Date(today.setDate(diff));
+            let weekKeys = [];
+            
+            for (let i = 0; i < 7; i++) {
+                let temp = new Date(monday);
+                temp.setDate(monday.getDate() + i);
+                let k = `${temp.getFullYear()}-${String(temp.getMonth()+1).padStart(2,'0')}-${String(temp.getDate()).padStart(2,'0')}`;
+                weekKeys.push(k);
+            }
+            return weekKeys;
+        }
+
+        function renderHeatmap() {
+            const container = document.getElementById('heatmap-grid-container');
+            if(!container) return;
+            container.innerHTML = "";
+
+            const isDark = document.documentElement.classList.contains('dark');
+            const partitionedData = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 0: [] };
+
+            timelineData.forEach(day => {
+                let dObj = new Date(day.key);
+                let jDay = dObj.getDay();
+                if (partitionedData[jDay] !== undefined) {
+                    partitionedData[jDay].push(day);
+                }
+            });
+
+            const targetDayOrder = [1, 2, 3, 4, 5, 6, 0];
+            const maxCols = Math.max(...Object.values(partitionedData).map(arr => arr.length));
+
+            for (let c = 0; c < maxCols; c++) {
+                for (let r = 0; r < targetDayOrder.length; r++) {
+                    let currentDayIndex = targetDayOrder[r];
+                    let daysArray = partitionedData[currentDayIndex] || [];
+                    const day = daysArray[c];
+
+                    const cell = document.createElement('div');
+                    cell.className = 'heatmap-cell';
+
+                    if (!day) {
+                        cell.style.opacity = "0";
+                        container.appendChild(cell);
+                        continue;
+                    }
+
+                    const data = userProgress[day.key];
+                    const total = data ? data.tasks.length : 0;
+                    const done = data ? data.tasks.filter(t => t.completed).length : 0;
+                    const pct = total ? (done / total) * 100 : 0;
+                    
+                    if (total === 0 || done === 0) {
+                        cell.style.backgroundColor = isDark ? '#334155' : '#f1f5f9';
+                    } else if (pct < 40) {
+                        cell.style.backgroundColor = '#a7f3d0'; 
+                    } else if (pct < 80) {
+                        cell.style.backgroundColor = '#34d399'; 
+                    } else {
+                        cell.style.backgroundColor = '#059669'; 
+                    }
+
+                    cell.title = `${day.displayDate} (${day.dayName})\nTugas: ${done}/${total} Selesai (${Math.round(pct)}%)`;
+                    cell.onclick = () => jumpToDate(day.key);
+                    cell.style.cursor = 'pointer';
+
+                    container.appendChild(cell);
+                }
+            }
+        }
+
+        function updateMetrics() {
+            let yearTotal = 0, yearDone = 0, weekTotal = 0, weekDone = 0, globalTotal = 0, globalDone = 0;
+            const currentYear = new Date().getFullYear();
+            const currentMonthIdx = new Date().getMonth();
+            const currentWeekKeys = getCurrentWeekDates();
+
+            const startWParts = currentWeekKeys[0].split('-');
+            const endWParts = currentWeekKeys[6].split('-');
+            const displayWeekRange = `${startWParts[2]}/${startWParts[1]} - ${endWParts[2]}/${endWParts[1]}`;
+
+            document.getElementById("stat-week-label").innerText = `PROGRES PEKAN INI (${displayWeekRange})`;
+            document.getElementById("stat-month-label").innerText = `PROGRES BULAN ${monthNamesId[currentMonthIdx].toUpperCase()}`;
+            document.getElementById("stat-year-label").innerText = `PROGRES TAHUN ${currentYear}`;
+
+            currentWeekKeys.forEach(k => {
+                if(userProgress[k]) { 
+                    weekTotal += userProgress[k].tasks.length; 
+                    weekDone += userProgress[k].tasks.filter(t => t.completed).length; 
+                }
+            });
+
+            Object.keys(userProgress).forEach(k => {
+                const total = userProgress[k].tasks.length, done = userProgress[k].tasks.filter(t => t.completed).length;
+                globalTotal += total; globalDone += done;
+                if(k.startsWith(currentYear)) { yearTotal += total; yearDone += done; }
+            });
+
+            const wPct = weekTotal ? Math.round((weekDone/weekTotal)*100) : 0;
+            const mPct = globalTotal ? Math.round((globalDone/globalTotal)*100) : 0;
+            const yPct = yearTotal ? Math.round((yearDone/yearTotal)*100) : 0;
+
+            document.getElementById("stat-week-pct").innerText = `${wPct}%`;
+            document.getElementById("stat-month-pct").innerText = `${mPct}%`;
+            document.getElementById("stat-year-pct").innerText = `${yPct}%`;
+            document.getElementById("stat-year-ratio").innerText = `(${yearDone} / ${yearTotal})`;
+
+            document.getElementById("doughnut-center-pct").innerText = `${wPct}%`;
+
+            const getColor = p => p < 40 ? '#ef4444' : p < 75 ? '#eab308' : '#10b981';
+            
+            ['week', 'month', 'year'].forEach((type, idx) => {
+                const pct = [wPct, mPct, yPct][idx];
+                const bar = document.getElementById(`bar-${type}-fill`);
+                if(bar) { bar.style.width = `${pct}%`; bar.style.backgroundColor = getColor(pct); }
+            });
+
+            document.getElementById("stat-week-trend").className = `text-[11px] font-semibold mt-1 ${wPct >= 75 ? 'text-emerald-600' : wPct >= 40 ? 'text-amber-500' : 'text-rose-500'}`;
+            document.getElementById("stat-week-trend").innerHTML = wPct >= 75 ? '↑ Di atas target' : wPct >= 40 ? '→ Cukup Stabil' : '↓ Kurang aktif';
+            
+            document.getElementById("stat-month-trend").className = `text-[11px] font-semibold mt-1 ${mPct >= 80 ? 'text-emerald-600' : 'text-blue-500'}`;
+            document.getElementById("stat-month-trend").innerHTML = mPct >= 80 ? '↑ Sangat Optimal' : '→ Aman';
+
+            let maxStreak = 0, curr = 0;
+            timelineData.forEach(d => {
+                const data = userProgress[d.key];
+                if(data && data.tasks.length && data.tasks.every(t => t.completed)) { curr++; if(curr > maxStreak) maxStreak = curr; } else { curr = 0; }
+            });
+            document.getElementById("stat-streak-val").innerText = `${maxStreak} Hari Beruntun`;
+            
+            const constEl = document.getElementById("stat-consistency"), constBar = document.getElementById("bar-consistency-fill");
+            if(mPct >= 80) { constEl.innerHTML = 'Sangat Produktif 🔥'; constBar.style.width = "100%"; constBar.style.backgroundColor = "#10b981"; }
+            else if(mPct >= 50) { constEl.innerHTML = 'Cukup Stabil ⚡'; constBar.style.width = "65%"; constBar.style.backgroundColor = "#3b82f6"; }
+            else { constEl.innerHTML = 'Butuh Fokus 🎯'; constBar.style.width = "35%"; constBar.style.backgroundColor = "#eab308"; }
+        }
+
+        function initCharts() {
+            const isDark = document.documentElement.classList.contains('dark');
+            segmentedDoughnutInstance = new Chart(document.getElementById('segmentedDoughnutChart').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+                    datasets: [{
+                        label: 'Tugas Selesai',
+                        data: [1, 1, 1, 1, 1, 1, 1], 
+                        backgroundColor: ['#10b981', '#2563eb', '#7c3aed', '#db2777', '#ef4444', '#f97316', '#64748b'],
+                        borderWidth: 4, 
+                        borderColor: isDark ? '#1e293b' : '#ffffff',
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%', 
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 10,
+                                font: { size: 10, family: 'Plus Jakarta Sans' },
+                                color: isDark ? '#94a3b8' : '#475569'
+                            }
+                        }
+                    }
+                }
+            });
+
+            monthlyChartInstance = new Chart(document.getElementById('monthlyChart').getContext('2d'), {
+                type: 'line', 
+                data: { 
+                    labels: ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov'], 
+                    datasets: [{ label: 'Tren Target Kepatuhan (%)', data: [60, 70, 65, 80, 75, 85], borderColor: '#10b981', fill: false, tension: 0.2 }] 
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min:0, max:100 } } }
+            });
+        }
+
+        function updateCharts() {
+            if (!segmentedDoughnutInstance) return;
+            const isDark = document.documentElement.classList.contains('dark');
+            let chartData = [];
+            const currentWeekKeys = getCurrentWeekDates();
+
+            currentWeekKeys.forEach(k => {
+                let ts = userProgress[k]?.tasks || [];
+                chartData.push(ts.filter(t => t.completed).length || 0);
+            });
+
+            const totalTasksDone = chartData.reduce((a, b) => a + b, 0);
+            segmentedDoughnutInstance.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
+            
+            if(totalTasksDone === 0) {
+                segmentedDoughnutInstance.data.datasets[0].data = [1, 1, 1, 1, 1, 1, 1];
+                segmentedDoughnutInstance.data.datasets[0].backgroundColor = isDark ? ['#475569','#475569','#475569','#475569','#475569','#475569','#475569'] : ['#e2e8f0','#e2e8f0','#e2e8f0','#e2e8f0','#e2e8f0','#e2e8f0','#e2e8f0'];
+            } else {
+                segmentedDoughnutInstance.data.datasets[0].data = chartData;
+                segmentedDoughnutInstance.data.datasets[0].backgroundColor = ['#10b981','#2563eb','#7c3aed','#db2777','#ef4444','#f97316','#64748b'];
+            }
+
+            const currentYear = new Date().getFullYear();
+            const monthlyData = Array(12).fill(0).map(() => ({ total: 0, done: 0 }));
+            
+            Object.keys(userProgress).forEach(k => {
+                if (k.startsWith(currentYear)) {
+                    const monthIdx = parseInt(k.split('-')[1]) - 1;
+                    monthlyData[monthIdx].total += userProgress[k].tasks.length;
+                    monthlyData[monthIdx].done += userProgress[k].tasks.filter(t => t.completed).length;
+                }
+            });
+
+            const labels = ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov'];
+            const points = [0, 2, 4, 6, 8, 10].map(idx => {
+                const m = monthlyData[idx];
+                return m.total ? Math.round((m.done / m.total) * 100) : 50;
+            });
+
+            monthlyChartInstance.data.labels = labels;
+            monthlyChartInstance.data.datasets[0].data = points;
+            monthlyChartInstance.data.datasets[0].borderColor = isDark ? '#34d399' : '#10b981';
+
+            segmentedDoughnutInstance.update();
+            monthlyChartInstance.update();
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(userProgress));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `routine_tracker_backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function triggerImport() {
+            document.getElementById('import-file-input').click();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if(typeof parsed === 'object') {
+                        userProgress = parsed;
+                        saveStorage();
+                        filterTimeline();
+                        alert("Data berhasil dipulihkan!");
+                    }
+                } catch(err) {
+                    alert("Format file tidak valid.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function resetAllData() {
+            openInputModal(
+                "Reset Semua Data?",
+                "Tindakan ini akan menghapus seluruh rekaman rutinitas secara permanen.",
+                "",
+                "",
+                function() {
+                    localStorage.removeItem(STORAGE_KEY);
+                    userProgress = {};
+                    loadStorage();
+                    saveStorage();
+                    filterTimeline();
+                },
+                true
+            );
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            generateTimeline();
+            loadStorage();
+            initCharts();
+            filterTimeline();
+            
+            setTimeout(() => {
+                let d = new Date(), k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                const todayEl = document.getElementById(`card-day-${k}`);
+                if(todayEl) todayEl.scrollIntoView({ behavior: 'auto', inline: 'center' });
+            }, 300);
+        });
+    </script>
+</body>
+</html>
